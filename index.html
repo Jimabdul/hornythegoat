@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rocket to the Moon</title>
+    <title>HORNYTHEGOAT</title>
     <style>
         body {
             margin: 0;
@@ -22,21 +22,18 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            background-color: blue;
         }
 
         #loading-page img {
-            width: 100%;
-            height: 100vh;
-
+            width: 500px;
+            height: auto;
         }
 
         #loading-page p {
-            color: red;
-            font-size: 30px;
-            border-radius: 10px;
-            margin-top: 3px;
-            text-align: center;
-            font-family: san-serif;
+            color: white;
+            font-size: 24px;
+            margin-top: 20px;
         }
 
         #game-container {
@@ -49,11 +46,11 @@
 
         .rocket {
             position: absolute;
-            bottom: 20px;
+            bottom: 140px;
             left: 50%;
             transform: translateX(-50%);
-            width: 100px;
-            height: 200px;
+            width: 90px;
+            height: 180px;
             background: url('./rocket.png') no-repeat center/contain;
             background-size: cover;
         }
@@ -73,17 +70,16 @@
         .power-up {
             background: url('./star.png') no-repeat center/contain;
             background-size: cover;
-              width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
         }
 
         .control-buttons {
             position: absolute;
-            bottom: 20px;
+            bottom: 100px;
             width: 100%;
             display: flex;
-            justify-content: center;
-            gap: 20px;
+            justify-content: space-around;
             padding: 0 10px;
         }
 
@@ -95,7 +91,8 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            width: 40%;
+            flex: 1;
+            margin: 0 10px;
         }
 
         .control-buttons button:hover {
@@ -108,6 +105,9 @@
             left: 10px;
             font-size: 20px;
             color: red;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
         }
 
         .countdown {
@@ -115,7 +115,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 50px;
+            font-size: 48px;
             color: white;
             background-color: rgba(0, 0, 0, 0.7);
             padding: 20px;
@@ -123,43 +123,60 @@
             text-align: center;
         }
 
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: red;
+            text-align: center;
+        }
+
+        #play-again {
+            display: none;
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
         @media (max-width: 768px) {
             .rocket {
-                width: 100px;
-                height: 200px;
+                width: 90px;
+                height: 180px;
             }
-            
-             #loading-page img {
-            width: 200%;
-            height: 100vh;
-        }
+
             .control-buttons button {
-                font-size: 14px;
-                width: 40%;
+                font-size: 18px;
             }
 
             .score {
-                font-size: 16px;
+                font-size: 20px;
             }
 
             .countdown {
-                font-size: 40px;
+                font-size: 36px;
             }
         }
 
         @media (max-width: 480px) {
             .rocket {
-                width: 100px;
-                height: 200px;
+                width: 80px;
+                height: 160px;
             }
-             #loading-page img {
-            width: 200%;
-            height: 100vh;
-        }
 
             .control-buttons button {
-                font-size: 12px;
-                width: 35%;
+                font-size: 16px;
+                padding: 8px 16px;
             }
 
             .score {
@@ -167,14 +184,14 @@
             }
 
             .countdown {
-                font-size: 30px;
+                font-size: 28px;
             }
         }
     </style>
 </head>
 <body>
     <div id="loading-page">
-        <img src="./rocket.png" alt="">
+        <img src="./rocket.png" alt="Loading Rocket">
         <p>Loading... Please wait</p>
     </div>
 
@@ -186,8 +203,10 @@
             <button id="move-right" disabled>Right</button>
         </div>
         <div id="countdown" class="countdown"></div>
+        <div id="game-over">Game Over</div>
+        <button id="play-again">Play Again</button>
     </div>
-    
+
     <audio id="background-music" src="background-music.mp3" loop></audio>
     <audio id="collision-sound" src="./assets/collision.mp3"></audio>
     <audio id="power-up-sound" src="./assets/power-up.mp3"></audio>
@@ -198,35 +217,69 @@
         const countdownEl = document.getElementById('countdown');
         const moveLeftBtn = document.getElementById('move-left');
         const moveRightBtn = document.getElementById('move-right');
+        const playAgainBtn = document.getElementById('play-again');
+        const gameOverEl = document.getElementById('game-over');
         const backgroundMusic = document.getElementById('background-music');
+        const collisionSound = document.getElementById('collision-sound');
         const scoreDisplay = document.querySelector('.score');
         const rocket = document.querySelector('.rocket');
 
         let score = 0;
         let rocketPosition = 50; // Initial rocket position (percentage)
         let backgroundPosition = 0;
+        let gameInterval;
+        let asteroidInterval;
+        let powerUpInterval;
 
         function startGame() {
+            score = 0;
+            rocketPosition = 50;
+            backgroundPosition = 0;
+
+            scoreDisplay.textContent = `Score: ${score}`;
+            rocket.style.left = `${rocketPosition}%`;
+            gameContainer.style.backgroundPositionY = `${backgroundPosition}px`;
+            playAgainBtn.style.display = 'none';
+            gameOverEl.style.display = 'none';
+
             moveLeftBtn.disabled = false;
             moveRightBtn.disabled = false;
 
+            backgroundMusic.currentTime = 0;
             backgroundMusic.play();
 
-            // Start game intervals
-            setInterval(moveBackground, 30);
-            setInterval(() => createAsteroid(), 2000);
-            setInterval(() => createPowerUp(), 7000);
+            gameInterval = setInterval(() => {
+                backgroundPosition += 5;
+                gameContainer.style.backgroundPositionY = `${backgroundPosition}px`;
+            }, 30);
+
+            asteroidInterval = setInterval(() => createAsteroid(), 2000);
+            powerUpInterval = setInterval(() => createPowerUp(), 7000);
         }
 
-        function moveBackground() {
-            backgroundPosition += 2;
-            gameContainer.style.backgroundPositionY = `${backgroundPosition}px`;
+        function endGame() {
+            clearInterval(gameInterval);
+            clearInterval(asteroidInterval);
+            clearInterval(powerUpInterval);
+
+            moveLeftBtn.disabled = true;
+            moveRightBtn.disabled = true;
+            backgroundMusic.pause();
+            collisionSound.play();
+            gameOverEl.style.display = 'block';
+            playAgainBtn.style.display = 'block';
+        }
+
+        function resetGame() {
+            document.querySelectorAll('.asteroid, .power-up').forEach(element => element.remove());
+            countdownEl.style.display = 'block';
+            startCountdown();
         }
 
         function moveRocket(direction) {
-            if (direction === 'left' && rocketPosition > 0) {
+            if (direction === 'left' && rocketPosition > 5) {
                 rocketPosition -= 5;
-            } else if (direction === 'right' && rocketPosition < 100) {
+            } else if (direction === 'right' && rocketPosition < 95) {
                 rocketPosition += 5;
             }
             rocket.style.left = `${rocketPosition}%`;
@@ -236,14 +289,13 @@
             const asteroid = document.createElement('div');
             asteroid.classList.add('asteroid');
             asteroid.style.left = `${Math.random() * 90}%`;
-            asteroid.style.top = '-100px'; // Start above the screen
+            asteroid.style.top = '-100px';
             gameContainer.appendChild(asteroid);
 
             const asteroidInterval = setInterval(() => {
-                const asteroidTop = parseInt(asteroid.style.top || '-100') + 5;
+                const asteroidTop = parseInt(asteroid.style.top || '-100') + 8;
                 asteroid.style.top = `${asteroidTop}px`;
 
-                // Collision detection
                 const rocketRect = rocket.getBoundingClientRect();
                 const asteroidRect = asteroid.getBoundingClientRect();
 
@@ -253,12 +305,11 @@
                     rocketRect.top < asteroidRect.bottom &&
                     rocketRect.bottom > asteroidRect.top
                 ) {
-                    // Collision detected
-                    alert('Game Over!');
-                    location.reload(); // Restart the game
+                    clearInterval(asteroidInterval);
+                    asteroid.remove();
+                    endGame();
                 }
 
-                // Remove asteroid if it goes off-screen
                 if (asteroidTop > window.innerHeight) {
                     asteroid.remove();
                     clearInterval(asteroidInterval);
@@ -270,14 +321,13 @@
             const powerUp = document.createElement('div');
             powerUp.classList.add('power-up');
             powerUp.style.left = `${Math.random() * 90}%`;
-            powerUp.style.top = '-100px'; // Start above the screen
+            powerUp.style.top = '-100px';
             gameContainer.appendChild(powerUp);
 
             const powerUpInterval = setInterval(() => {
                 const powerUpTop = parseInt(powerUp.style.top || '-100') + 5;
                 powerUp.style.top = `${powerUpTop}px`;
 
-                // Collision detection
                 const rocketRect = rocket.getBoundingClientRect();
                 const powerUpRect = powerUp.getBoundingClientRect();
 
@@ -287,14 +337,12 @@
                     rocketRect.top < powerUpRect.bottom &&
                     rocketRect.bottom > powerUpRect.top
                 ) {
-                    // Power-up collected
                     score += 10;
                     scoreDisplay.textContent = `Score: ${score}`;
                     powerUp.remove();
                     clearInterval(powerUpInterval);
                 }
 
-                // Remove power-up if it goes off-screen
                 if (powerUpTop > window.innerHeight) {
                     powerUp.remove();
                     clearInterval(powerUpInterval);
@@ -304,6 +352,8 @@
 
         moveLeftBtn.addEventListener('click', () => moveRocket('left'));
         moveRightBtn.addEventListener('click', () => moveRocket('right'));
+
+        playAgainBtn.addEventListener('click', resetGame);
 
         setTimeout(() => {
             loadingPage.style.display = 'none';
@@ -318,7 +368,7 @@
             const countdownInterval = setInterval(() => {
                 count--;
                 if (count > 0) {
-                    countdownEl.textContent = count;
+        countdownEl.textContent = count;
                 } else {
                     clearInterval(countdownInterval);
                     countdownEl.style.display = 'none';
@@ -329,4 +379,3 @@
     </script>
 </body>
 </html>
-
